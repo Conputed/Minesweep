@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minesweeper Game</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      background-color: #008080; /* Windows XP Minesweeper background color */
+      font-family: 'Play', sans-serif; /* Set font to Play */
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(10, 30px);
+      gap: 1px;
+      background-color: #808080; /* Windows XP Minesweeper grid background color */
+      border: 5px solid #000080; /* Windows XP Minesweeper border color */
+      margin-top: 20px;
+      visibility: hidden;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background-color: #c0c0c0; /* Windows XP Minesweeper cell background color */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .hidden {
+      background-color: #c0c0c0; /* Windows XP Minesweeper hidden cell background color */
+    }
+    .revealed {
+      background-color: #dcdcdc; /* Windows XP Minesweeper revealed cell background color */
+      cursor: not-allowed;
+    }
+    .mine {
+      background: url('https://esraa-alaarag.github.io/Minesweeper/images/bomb.png') center/contain no-repeat; /* Custom bomb image */
+    }
+    #startButton {
+      background-color: #008080; /* Windows XP Minesweeper background color */
+      color: #fff;
+      padding: 10px;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .number-1 {
+      color: #0000ff; /* Blue */
+    }
+    .number-2 {
+      color: #008000; /* Green */
+    }
+    .number-3 {
+      color: #ff0000; /* Red */
+    }
+    .number-4 {
+      color: #000080; /* Dark Blue */
+    }
+    .number-5 {
+      color: #800000; /* Maroon */
+    }
+    .number-6 {
+      color: #008080; /* Teal */
+    }
+    .number-7 {
+      color: #000000; /* Black */
+    }
+    .number-8 {
+      color: #808080; /* Gray */
+    }
+  </style>
+</head>
+<body>
+
+<audio id="clickSound" src="https://audio.jukehost.co.uk/B0fVvJCOSKd0YxJtz0e7dymWhWwxykel"></audio>
+<audio id="loseSound" src="https://audio.jukehost.co.uk/M82JXYQOywPGRc81TtdwwptKsY4Oo4GU"></audio>
+<audio id="startSound" src="https://audio.jukehost.co.uk/0MU2JComypExsgVEcBRiAZTPAmVa3fDg"></audio>
+
+<button id="startButton" onclick="startGame()">Start Game</button>
+<div id="board"></div>
+
+<script>
+  const rows = 10;
+  const cols = 10;
+  const mines = 15;
+
+  let board = [];
+  let mineLocations = [];
+
+  function initializeBoard() {
+    for (let i = 0; i < rows; i++) {
+      board[i] = [];
+      for (let j = 0; j < cols; j++) {
+        board[i][j] = {
+          isMine: false,
+          adjacentMines: 0,
+          revealed: false
+        };
+      }
+    }
+  }
+
+  function plantMines() {
+    for (let i = 0; i < mines; i++) {
+      let row, col;
+      do {
+        row = Math.floor(Math.random() * rows);
+        col = Math.floor(Math.random() * cols);
+      } while (board[row][col].isMine);
+      board[row][col].isMine = true;
+      mineLocations.push({ row, col });
+    }
+  }
+
+  function calculateAdjacentMines() {
+    for (let mine of mineLocations) {
+      const { row, col } = mine;
+      for (let i = row - 1; i <= row + 1; i++) {
+        for (let j = col - 1; j <= col + 1; j++) {
+          if (i >= 0 && i < rows && j >= 0 && j < cols && !board[i][j].isMine) {
+            board[i][j].adjacentMines++;
+          }
+        }
+      }
+    }
+  }
+
+  function revealCell(row, col) {
+    if (row < 0 || row >= rows || col < 0 || col >= cols || board[row][col].revealed) {
+      return;
+    }
+
+    board[row][col].revealed = true;
+
+    if (board[row][col].isMine) {
+      document.getElementById('loseSound').play();
+      setTimeout(() => {
+        alert('Game Over! You hit a mine.');
+        location.reload();
+      }, 2000); // Adjust the timeout duration as needed
+      return;
+    } else {
+      document.getElementById('clickSound').play();
+    }
+
+    if (board[row][col].adjacentMines === 0) {
+      for (let i = row - 1; i <= row + 1; i++) {
+        for (let j = col - 1; j <= col + 1; j++) {
+          revealCell(i, j);
+        }
+      }
+    }
+  }
+
+  function renderBoard() {
+    const boardElement = document.getElementById('board');
+    boardElement.innerHTML = '';
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const cellElement = document.createElement('div');
+        cellElement.classList.add('cell', 'hidden');
+        const cellValue = board[i][j].revealed ?
+          (board[i][j].isMine ? '' : (board[i][j].adjacentMines || '')) : '';
+        cellElement.innerHTML = cellValue;
+
+        if (board[i][j].revealed && board[i][j].isMine) {
+          cellElement.classList.add('mine');
+        } else if (!board[i][j].isMine && board[i][j].adjacentMines > 0) {
+          cellElement.classList.add(`number-${board[i][j].adjacentMines}`);
+        }
+
+        cellElement.addEventListener('click', () => {
+          revealCell(i, j);
+          renderBoard();
+        });
+
+        boardElement.appendChild(cellElement);
+      }
+    }
+
+    boardElement.style.visibility = 'visible';
+  }
+
+  function startGame() {
+    initializeBoard();
+    plantMines();
+    calculateAdjacentMines();
+    renderBoard();
+    document.getElementById('startSound').play();
+    document.getElementById('startButton').style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
